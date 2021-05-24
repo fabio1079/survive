@@ -7,8 +7,9 @@ import pyxel
 from easymunk import Vec2d, Arbiter, CircleBody, Space, march_string, ShapeFilter
 from easymunk import pyxel as phys
 
+MAX_WIDTH = 1000
 WIDTH, HEIGHT = 256, 196
-INITIAL_ENEMIES = 20
+INITIAL_ENEMIES = 5
 SCENARIO = """
 |
 |
@@ -187,9 +188,11 @@ class Enemy(GameObject, CircleBody):
         elif self.lives == 3:
             return pyxel.COLOR_YELLOW
         elif self.lives == 2:
+            return pyxel.COLOR_PINK
+        elif self.lives == 1:
             return pyxel.COLOR_RED
         else:
-            return pyxel.COLOR_PURPLE
+            return pyxel.COLOR_BROWN
 
     def update(self):
         ...
@@ -319,9 +322,9 @@ class DeathParticles(Particles):
         elif t > self.color_scale * 3:
             return pyxel.COLOR_RED
         elif t > self.color_scale * 2:
-            return pyxel.COLOR_PURPLE
+            return pyxel.COLOR_ORANGE
         elif t > self.color_scale * 1:
-            return pyxel.COLOR_BROWN
+            return pyxel.COLOR_PURPLE
         else:
             return pyxel.COLOR_GRAY
 
@@ -352,7 +355,7 @@ class Game:
         self.player.register(self.space, self.message)
 
         # Cria chão
-        self.ground = phys.rect(0, 0, 1000, 48, body_type="static")
+        self.ground = phys.rect(0, 0, MAX_WIDTH, 48, body_type="static")
 
         # Cria cenário
         for line in march_string(
@@ -362,11 +365,11 @@ class Game:
             phys.poly(line, body_type="static", color=pyxel.COLOR_PEACH)
 
         # Cria margens
-        phys.margin(0, 0, 1000, HEIGHT)
+        phys.margin(0, 0, MAX_WIDTH, HEIGHT)
 
         # Cria inimigos
         for _ in range(INITIAL_ENEMIES):
-            enemy = Enemy.random(0, 1000, HEIGHT / 2, HEIGHT)
+            enemy = Enemy.random(0, MAX_WIDTH, HEIGHT / 2, HEIGHT)
             enemy.register(self.space, self.message)
             self.enemies.append(enemy)
 
@@ -411,6 +414,7 @@ class Game:
             self.player.update()
 
         self.camera.follow(self.player.position, tol=self.CAMERA_TOL)
+        # self.camera.follow(self.player.position)
 
         for b in self.bullets:
             b.update()
@@ -437,7 +441,7 @@ class Game:
                 self.del_bullet(b)
                 e.lives -= 1
 
-                if e.lives < 0:
+                if e.lives <= 0:
                     self.del_enemy(e)
 
     def shoot_bullet(self):
@@ -445,8 +449,7 @@ class Game:
             return
 
         (px, py) = self.player.position
-        mx = self.camera.mouse_x
-        my = self.camera.mouse_y
+        (mx, my) = self.correct_mouse_distance(px, self.camera)
 
         b = Bullet(px, py, mx, my, self.del_bullet)
         b.register(self.space, self.message)
@@ -466,6 +469,12 @@ class Game:
 
     def remove_death_particle(self, p: Particles):
         self.particles.remove(p)
+
+    def correct_mouse_distance(self, px, camera: phys.Camera):
+        mx = camera.mouse_x
+        my = camera.mouse_y
+
+        return (px + mx - (WIDTH / 2), my)
 
 
 if __name__ == "__main__":
