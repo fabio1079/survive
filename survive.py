@@ -38,6 +38,7 @@ class GameState(enum.IntEnum):
     RUNNING = 1
     GAME_OVER = 2
     HAS_WON = 3
+    PAUSED = 4
 
 
 class GameObject(ABC):
@@ -330,7 +331,7 @@ class Game:
         )
 
         # Inicializa o jogo
-        self.state = GameState.RUNNING
+        self.state = GameState.PAUSED
         pyxel.load("assets.pyxres")
 
         # Cria jogador
@@ -380,6 +381,10 @@ class Game:
         for p in self.particles:
             p.draw(self.camera)
 
+        if self.state is GameState.PAUSED:
+            self.display_paused_screen()
+            return
+
         msg = ""
         if self.state is GameState.GAME_OVER:
             msg = "GAME OVER"
@@ -390,7 +395,29 @@ class Game:
             x = (WIDTH - len(msg) * pyxel.FONT_WIDTH) / 2
             pyxel.text(round(x), HEIGHT // 2, msg, pyxel.COLOR_YELLOW)
 
+    def display_paused_screen(self):
+        msgs = [
+            "GAME PAUSED, press space to continue",
+            "MOVE CHARACTER: A, S, D, W",
+            "SHOOT WITH MOUSE LEFT",
+        ]
+
+        y = HEIGHT // 2
+        for msg in msgs:
+            x = (WIDTH - len(msg) * pyxel.FONT_WIDTH) / 2
+            pyxel.text(round(x), y, msg, pyxel.COLOR_YELLOW)
+            y += 10
+
     def update(self):
+        if pyxel.btnp(pyxel.KEY_SPACE) and self.state is not GameState.GAME_OVER:
+            if self.state is GameState.PAUSED:
+                self.state = GameState.RUNNING
+            else:
+                self.state = GameState.PAUSED
+
+        if self.state is GameState.PAUSED:
+            return
+
         self.space.step(1 / 30, 2)
 
         if self.state is not GameState.GAME_OVER:
