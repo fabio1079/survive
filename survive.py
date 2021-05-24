@@ -221,20 +221,17 @@ class Enemy(GameObject, CircleBody):
             return True
 
 
-class Particles:
+class DeathParticles(GameObject):
+    MAX_DURATION = 30  # each particle duration
+    MAX_GENERATED = 100  # total number of generated particles on death animation
+
     def __init__(self, space, remove_me):
         self.particles = []
         self.space = space
-        self.duration = 100
         self.remove_me = remove_me
-
-    def draw(self, camera=pyxel):
-        for p in self.particles:
-            x, y = p.position
-            if random.random() < 0.15:
-                camera.rect(x, y, 2, 2, self.get_color(p.duration))
-            else:
-                camera.pset(x, y, self.get_color(p.duration))
+        self.duration = self.MAX_DURATION
+        self.generated = 0
+        self.color_scale = self.MAX_DURATION / 6
 
     def update(self):
         for p in self.particles.copy():
@@ -248,48 +245,16 @@ class Particles:
         if len(self.particles) == 0:
             self.remove_me(self)
 
-    def emmit(self, position, velocity):
-        p = self.space.create_circle(
-            radius=1,
-            mass=0.1,
-            moment=float("inf"),
-            position=position,
-            velocity=velocity,
-            filter=ShapeFilter(group=1),
-        )
+    def draw(self, camera=pyxel):
+        for p in self.particles:
+            x, y = p.position
+            if random.random() < 0.15:
+                camera.rect(x, y, 2, 2, self.get_color(p.duration))
+            else:
+                camera.pset(x, y, self.get_color(p.duration))
 
-        p.duration = self.duration - random.expovariate(1 / 10)
-        p.velocity_func = self.update_velocity
-        self.particles.append(p)
-
-    def update_velocity(self, body, gravity, damping, dt):
-        body.update_velocity(body, -gravity / 2, 0.99, dt)
-
-    def get_color(self, t: int):
-        if t > 95:
-            return pyxel.COLOR_WHITE
-        elif t > 80:
-            return pyxel.COLOR_YELLOW
-        elif t > 65:
-            return pyxel.COLOR_RED
-        elif t > 40:
-            return pyxel.COLOR_PURPLE
-        elif t > 25:
-            return pyxel.COLOR_BROWN
-        else:
-            return pyxel.COLOR_GRAY
-
-
-class DeathParticles(Particles):
-    MAX_DURATION = 30  # each particle duration
-    MAX_GENERATED = 100  # total number of generated particles on death animation
-
-    def __init__(self, space, remove_me):
-        super().__init__(space, remove_me)
-
-        self.duration = self.MAX_DURATION
-        self.generated = 0
-        self.color_scale = self.MAX_DURATION / 6
+    def register(self, space, message):
+        pass
 
     @property
     def keep_generating(self):
@@ -312,7 +277,22 @@ class DeathParticles(Particles):
             return  # stop generating more particles
 
         self.generated += 1
-        return super().emmit(position, velocity)
+
+        p = self.space.create_circle(
+            radius=1,
+            mass=0.1,
+            moment=float("inf"),
+            position=position,
+            velocity=velocity,
+            filter=ShapeFilter(group=1),
+        )
+
+        p.duration = self.duration - random.expovariate(1 / 10)
+        p.velocity_func = self.update_velocity
+        self.particles.append(p)
+
+    def update_velocity(self, body, gravity, damping, dt):
+        body.update_velocity(body, -gravity / 2, 0.99, dt)
 
     def get_color(self, t: int):
         if t > self.color_scale * 5:
@@ -335,7 +315,7 @@ class Game:
     player: Player = None
     bullets: List[Bullet] = []
     MAX_BULLETS = 10
-    particles: List[Particles] = []
+    particles: List[DeathParticles] = []
 
     def __init__(self, scenario=SCENARIO):
         self.camera = phys.Camera(flip_y=True)
@@ -467,7 +447,7 @@ class Game:
         death.generate_particles(enemy_position)
         self.particles.append(death)
 
-    def remove_death_particle(self, p: Particles):
+    def remove_death_particle(self, p: DeathParticles):
         self.particles.remove(p)
 
     def correct_mouse_distance(self, px, camera: phys.Camera):
