@@ -9,7 +9,7 @@ from easymunk import pyxel as phys
 
 MAX_WIDTH = 1000
 WIDTH, HEIGHT = 256, 196
-INITIAL_ENEMIES = 5
+INITIAL_ENEMIES = 20
 SCENARIO = """
 |
 |
