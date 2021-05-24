@@ -75,7 +75,10 @@ class Bullet(GameObject, CircleBody):
         self.velocity = Vec2d(self.dx, self.dy)
 
     def update(self):
-        dp = self.position + self.velocity
+        dpx = self.position.x + self.velocity[0] + self.velocity[0] * 0.5
+        dpy = self.position.y + self.velocity[1] + self.velocity[1] * 0.5
+
+        dp = Vec2d(dpx, dpy)
         self.position = dp
 
         self.life_time -= 1
